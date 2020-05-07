@@ -1,16 +1,17 @@
 package engineio
 
 import (
-	websocket2 "github.com/gorilla/websocket"
-	"io"
-	"net/http"
-	"sync"
-	"time"
-
+	"fmt"
 	"github.com/googollee/go-engine.io/base"
 	"github.com/googollee/go-engine.io/transport"
 	"github.com/googollee/go-engine.io/transport/polling"
 	"github.com/googollee/go-engine.io/transport/websocket"
+	websocket2 "github.com/gorilla/websocket"
+	"io"
+	"log"
+	"net/http"
+	"sync"
+	"time"
 )
 
 func defaultChecker(*http.Request) (http.Header, error) {
@@ -27,6 +28,7 @@ type Options struct {
 	PingInterval       time.Duration
 	Transports         []transport.Transport
 	SessionIDGenerator SessionIDGenerator
+	ChanNumber         uint
 }
 
 func (c *Options) getRequestChecker() func(*http.Request) (http.Header, error) {
@@ -73,6 +75,13 @@ func (c *Options) getSessionIDGenerator() SessionIDGenerator {
 	}
 	return &defaultIDGenerator{}
 }
+func (c *Options) getChanNumber() uint {
+	if c != nil && c.ChanNumber > 0 {
+		return c.ChanNumber
+	}
+	return 1
+
+}
 
 // Server is server.
 type Server struct {
@@ -96,7 +105,7 @@ func NewServer(opts *Options) (*Server, error) {
 		requestChecker: opts.getRequestChecker(),
 		connInitor:     opts.getConnInitor(),
 		sessions:       newManager(opts.getSessionIDGenerator()),
-		connChan:       make(chan Conn, 1),
+		connChan:       make(chan Conn, opts.getChanNumber()),
 	}, nil
 }
 
@@ -123,7 +132,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	session := s.sessions.Get(sid)
 	t := query.Get("transport")
 	tspt := s.transports.Get(t)
-
+	fmt.Println("server.go:", "sid", sid, "session", session != nil, "transport", t)
 	if tspt == nil {
 		http.Error(w, "invalid transport", http.StatusBadRequest)
 		return
@@ -136,11 +145,15 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for k, v := range header {
 		w.Header()[k] = v
 	}
+
+	//在每个用户第一次连接时，没有session去创建session，协程写入session。之前Serve那协程读取
 	if session == nil {
 		if sid != "" {
+			fmt.Println("invalid sid")
 			http.Error(w, "invalid sid", http.StatusBadRequest)
 			return
 		}
+		//调用对应协议的类生成conn
 		conn, err := tspt.Accept(w, r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadGateway)
@@ -157,7 +170,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		s.connInitor(r, session)
-
+		//获取下个io.write把相关参数吸入encoder。最后把整个session写入channel
 		go func() {
 			w, err := session.nextWriter(base.FrameString, base.OPEN)
 			if err != nil {
@@ -176,9 +189,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			s.connChan <- session
 		}()
 	}
+
+	//这个开始判断协议和session不一致后进行调用新协议（当前只可能是websocket）的accept
 	if session.Transport() != t {
 		conn, err := tspt.Accept(w, r)
 		if err != nil {
+			log.Println("server.go:190", err.Error())
 			// don't call http.Error() for HandshakeErrors because
 			// they get handled by the websocket library internally.
 			if _, ok := err.(websocket2.HandshakeError); !ok {
@@ -193,4 +209,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	session.serveHTTP(w, r)
+}
+
+func (s *Server) GetAllSessions() (int, []string) {
+	count, names := s.sessions.GetAllSessions()
+	return count, names
 }

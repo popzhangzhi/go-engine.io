@@ -61,3 +61,15 @@ func (m *manager) Remove(sid string) {
 	}
 	delete(m.s, sid)
 }
+
+func (m *manager) GetAllSessions() (int, []string) {
+	count := len(m.s)
+	if count == 0 {
+		return 0, nil
+	}
+	names := make([]string, count-1)
+	for name, _ := range m.s {
+		names = append(names, name)
+	}
+	return count, names
+}
