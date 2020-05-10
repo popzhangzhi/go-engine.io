@@ -28,6 +28,7 @@ func newWrapper(conn *websocket.Conn) wrapper {
 
 func (w wrapper) NextReader() (base.FrameType, io.ReadCloser, error) {
 	w.readLocker.Lock()
+	//  从websocket2 读出数据
 	typ, r, err := w.Conn.NextReader()
 	// The wrapper remains locked until the returned ReadCloser is Closed.
 	if err != nil {
@@ -35,8 +36,10 @@ func (w wrapper) NextReader() (base.FrameType, io.ReadCloser, error) {
 		return 0, nil, err
 	}
 	switch typ {
+	// 0
 	case websocket.TextMessage:
 		return base.FrameString, newRcWrapper(w.readLocker, r), nil
+	// 1
 	case websocket.BinaryMessage:
 		return base.FrameBinary, newRcWrapper(w.readLocker, r), nil
 	}
@@ -51,9 +54,11 @@ type rcWrapper struct {
 	io.Reader
 }
 
+// 包装类，设置读取的最长时间
 func newRcWrapper(l *sync.Mutex, r io.Reader) rcWrapper {
 	timer := time.NewTimer(30 * time.Second)
 	q := make(chan struct{})
+	// 新生成一个协程，来读取
 	go func() {
 		select {
 		case <-q:

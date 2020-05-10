@@ -1,6 +1,7 @@
 package engineio
 
 import (
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -211,19 +212,24 @@ func (s *session) serveHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *session) upgrading(t string, conn base.Conn) {
+
 	// Read a ping from the client.
 	err := conn.SetReadDeadline(time.Now().Add(s.params.PingTimeout))
 	if err != nil {
+		fmt.Println(111)
 		conn.Close()
 		return
 	}
-
+	// 执行到 packet/decoder 的NextReader()
 	ft, pt, r, err := conn.NextReader()
+
 	if err != nil {
+		fmt.Println(222)
 		conn.Close()
 		return
 	}
 	if pt != base.PING {
+		fmt.Println(333)
 		r.Close()
 		conn.Close()
 		return
@@ -233,6 +239,7 @@ func (s *session) upgrading(t string, conn base.Conn) {
 	// Sent a pong in reply.
 	err = conn.SetWriteDeadline(time.Now().Add(s.params.PingTimeout))
 	if err != nil {
+		fmt.Println(4444)
 		r.Close()
 		conn.Close()
 		return
@@ -240,23 +247,27 @@ func (s *session) upgrading(t string, conn base.Conn) {
 
 	w, err := conn.NextWriter(ft, base.PONG)
 	if err != nil {
+		fmt.Println(555)
 		r.Close()
 		conn.Close()
 		return
 	}
 	// echo
 	if _, err = io.Copy(w, r); err != nil {
+		fmt.Println(666)
 		w.Close()
 		r.Close()
 		conn.Close()
 		return
 	}
 	if err = r.Close(); err != nil {
+		fmt.Println(777)
 		w.Close()
 		conn.Close()
 		return
 	}
 	if err = w.Close(); err != nil {
+		fmt.Println(888)
 		conn.Close()
 		return
 	}
@@ -267,6 +278,7 @@ func (s *session) upgrading(t string, conn base.Conn) {
 	s.upgradeLocker.RUnlock()
 	p, ok := old.(transport.Pauser)
 	if !ok {
+		fmt.Println(999)
 		// old transport doesn't support upgrading
 		conn.Close()
 		return
@@ -274,6 +286,7 @@ func (s *session) upgrading(t string, conn base.Conn) {
 	p.Pause()
 	// Prepare to resume the connection if upgrade fails.
 	defer func() {
+		fmt.Println(10000)
 		if p != nil {
 			p.Resume()
 		}
@@ -282,15 +295,18 @@ func (s *session) upgrading(t string, conn base.Conn) {
 	// Check for upgrade packet from the client.
 	_, pt, r, err = conn.NextReader()
 	if err != nil {
+		fmt.Println(10)
 		conn.Close()
 		return
 	}
 	if pt != base.UPGRADE {
+		fmt.Println(11)
 		r.Close()
 		conn.Close()
 		return
 	}
 	if err = r.Close(); err != nil {
+		fmt.Println(12)
 		conn.Close()
 		return
 	}
@@ -303,4 +319,5 @@ func (s *session) upgrading(t string, conn base.Conn) {
 	p = nil
 
 	old.Close()
+	fmt.Println("session.go:266", " updaend")
 }

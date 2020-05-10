@@ -27,13 +27,13 @@ func (t *Transport) Name() string {
 	return "polling"
 }
 
-// Accept accepts a http request and create Conn.
+// 服务端生成新的conn，等待客服端连接
 func (t *Transport) Accept(w http.ResponseWriter, r *http.Request) (base.Conn, error) {
 	conn := newServerConn(t, r)
 	return conn, nil
 }
 
-// Dial dials connection to url.
+// 客服端连接服务端
 func (t *Transport) Dial(u *url.URL, requestHeader http.Header) (base.Conn, error) {
 	query := u.Query()
 	query.Set("transport", t.Name())

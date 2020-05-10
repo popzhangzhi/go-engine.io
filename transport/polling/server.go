@@ -2,6 +2,7 @@ package polling
 
 import (
 	"bytes"
+	"fmt"
 	"html/template"
 	"net"
 	"net/http"
@@ -85,6 +86,7 @@ func (c *serverConn) SetHeaders(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *serverConn) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("polling ServeHTTP")
 	switch r.Method {
 	case "OPTIONS":
 		if r.URL.Query().Get("j") == "" {

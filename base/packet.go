@@ -59,8 +59,11 @@ func (id PacketType) BinaryByte() byte {
 
 // ByteToPacketType converts a byte to PacketType.
 func ByteToPacketType(b byte, typ FrameType) PacketType {
+	// b为ascii -'0' 也就是减48
 	if typ == FrameString {
 		b -= '0'
 	}
+
+	//最后转成int
 	return PacketType(b)
 }

@@ -1,6 +1,9 @@
 package payload
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 type pauserStatus int
 
@@ -32,7 +35,10 @@ func newPauser() *pauser {
 func (p *pauser) Pause() bool {
 	p.l.Lock()
 	defer p.l.Unlock()
-
+	fmt.Println(p.status)
+	// 判断当前暂停的状态
+	// 第一次由 statusNormal->statusPausing worker =0 不暂停，状态变成statusPaused
+	// 第二次 statusPaused 所以return false
 	switch p.status {
 	case statusPaused:
 		return false
@@ -40,7 +46,8 @@ func (p *pauser) Pause() bool {
 		close(p.pausing)
 		p.status = statusPausing
 	}
-
+	fmt.Println("p.worker", p.worker)
+	// 当worker大于0的时候，会暂停该goroutine
 	for p.worker != 0 {
 		p.c.Wait()
 	}

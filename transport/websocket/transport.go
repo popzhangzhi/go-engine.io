@@ -72,6 +72,7 @@ func (t *Transport) Dial(u *url.URL, requestHeader http.Header) (base.Conn, erro
 }
 
 // Accept accepts a http request and create Conn.
+// 用websocket包进行升级
 func (t *Transport) Accept(w http.ResponseWriter, r *http.Request) (base.Conn, error) {
 	upgrader := websocket.Upgrader{
 		ReadBufferSize:  t.ReadBufferSize,

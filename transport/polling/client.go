@@ -50,6 +50,7 @@ func dial(client *http.Client, url *url.URL, requestHeader http.Header) (*client
 }
 
 func (c *clientConn) Open() (base.ConnParameters, error) {
+	// 一次http client连接 把reader写入 p.readerChan
 	go c.getOpen()
 
 	_, pt, r, err := c.NextReader()

@@ -183,17 +183,20 @@ func TestEngineUpgrade(t *testing.T) {
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
+	// 添加服务端代码
 	go func() {
 		defer wg.Done()
 
 		should := assert.New(t)
 		must := require.New(t)
 
+		// 阻塞等待 c := <-s.connChan
 		conn, err := svr.Accept()
 		must.Nil(err)
 		defer conn.Close()
 
 		ft, r, err := conn.NextReader()
+
 		must.Nil(err)
 		should.Equal(TEXT, ft)
 		b, err := ioutil.ReadAll(r)
@@ -201,6 +204,8 @@ func TestEngineUpgrade(t *testing.T) {
 		should.Equal("hello你好", string(b))
 		err = r.Close()
 		must.Nil(err)
+
+		fmt.Println("Server wait and reader", ft, string(b))
 
 		w, err := conn.NextWriter(BINARY)
 		must.Nil(err)
@@ -222,11 +227,12 @@ func TestEngineUpgrade(t *testing.T) {
 	must.Nil(err)
 
 	pRead := make(chan int, 1)
+	// 进行http协议下的第一次握手
 	go func() {
 		should := assert.New(t)
 		must := require.New(t)
 		pRead <- 1
-
+		fmt.Println("http下开始读取数据")
 		ft, pt, r, err := p.NextReader()
 		must.Nil(err)
 		should.Equal(base.FrameString, ft)

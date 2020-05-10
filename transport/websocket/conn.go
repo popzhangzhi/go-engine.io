@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -23,6 +24,7 @@ type conn struct {
 	base.FrameReader
 }
 
+// 生成新的conn适配socket io
 func newConn(ws *websocket.Conn, url url.URL, header http.Header) base.Conn {
 	w := newWrapper(ws)
 	closed := make(chan struct{})
@@ -66,6 +68,7 @@ func (c *conn) SetWriteDeadline(t time.Time) error {
 }
 
 func (c *conn) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("websocket ServeHTTP")
 	<-c.closed
 }
 
